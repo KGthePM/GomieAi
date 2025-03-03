@@ -40,7 +40,7 @@ app.add_middleware(
 
 # Ollama API settings
 OLLAMA_API_BASE_URL = os.getenv("OLLAMA_API_BASE_URL", "http://localhost:11434/api")
-DEFAULT_MODEL = os.getenv("DEFAULT_OLLAMA_MODEL", "llama3")
+DEFAULT_MODEL = os.getenv("DEFAULT_OLLAMA_MODEL", "mistral")
 
 # Custom exceptions
 class OllamaUnavailableError(Exception):
@@ -238,7 +238,7 @@ def setup_static_files():
         <div class="input-area">
             <label for="model-select">Model:</label>
             <select id="model-select">
-                <option value="llama3">llama3</option>
+                <option value="mistral">mistral</option>
                 <!-- Other models will be populated dynamically -->
             </select>
             
