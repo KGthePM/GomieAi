@@ -1,25 +1,39 @@
-version: '3'
+version: '3.8'
 
 services:
-  app:
-    build: .
-    ports:
-      - "8000:8000"
-    volumes:
-      - .:/app
-    environment:
-      - OLLAMA_API_BASE_URL=http://ollama:11434/api
-      - DEFAULT_OLLAMA_MODEL=llama3
-    depends_on:
-      - ollama
-
+  # Ollama service
   ollama:
     image: ollama/ollama:latest
+    container_name: ollama
     ports:
       - "11434:11434"
     volumes:
       - ollama_data:/root/.ollama
-    command: serve
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  # FastAPI application
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pm-doc-generator
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./:/app
+    environment:
+      - OLLAMA_API_BASE_URL=http://ollama:11434/api
+      - DEFAULT_OLLAMA_MODEL=mistral
+    depends_on:
+      - ollama
+    restart: unless-stopped
 
 volumes:
   ollama_data:

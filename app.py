@@ -577,7 +577,19 @@ async def generate_document(request: DocumentRequest):
 
 @app.post("/generate/stream")
 async def generate_document_stream(request: Request):
-    """Generate a document with streami
+    """Generate a document with streaming"""
+    try:
+        # Parse request body
+        body = await request.json()
+        
+        # Extract request parameters
+        model = body.get("model", DEFAULT_MODEL)
+        prompt = body.get("prompt")
+        system_prompt = body.get("system_prompt", "You are a helpful document generation assistant.")
+        options = body.get("options", {})
+        
+        # Validate required parameters
+        if not prompt:
             raise HTTPException(status_code=400, detail="Prompt is required")
 
         # Check if the requested model exists
