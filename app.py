@@ -34,8 +34,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",
-        "http://10.1.10.144:3000"
-        "http://10.1.10.144:8000"
+        "http://10.1.10.144:3000",
+        "http://10.1.10.144:8000",
         "*"
     ],
     allow_credentials=True,
@@ -69,7 +69,7 @@ class DocumentRequest(BaseModel):
     options: Optional[Dict[str, Any]] = None
 
 class DocumentResponse(BaseModel):
-    content: str
+    response: str
     model: str
 
 # Exception handlers
@@ -565,7 +565,7 @@ async def generate_document(request: DocumentRequest):
                         content = result.get("response", "")
                     
                     return DocumentResponse(
-                        content=content,
+                        response=content,
                         model=request.model
                     )
             
