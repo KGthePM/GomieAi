@@ -32,7 +32,10 @@ app = FastAPI(
 # Configure CORS for frontend access
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Update with your frontend URL in production
+    allow_origins=[
+        "http://localhost:3000",
+        "http://10.1.10.144:3000"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -504,6 +507,7 @@ async def generate_document(request: DocumentRequest):
             "prompt": request.prompt,
             "system": request.system_prompt,
             "options": request.options or {}
+            "stream": False  # Explicitly disable streaming
         }
         
         # Add retry logic
@@ -537,7 +541,8 @@ async def generate_document(request: DocumentRequest):
                             )
                     
                     result = response.json()
-                    
+                    logger.info(f"Raw Ollama response: {json.dumps(result)}")
+
                     # Format output based on requested format
                     if request.format == "markdown":
                         # Ollama returns already formatted text
