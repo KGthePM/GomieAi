@@ -35,6 +35,8 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",
         "http://10.1.10.144:3000"
+        "http://10.1.10.144:8000"
+        "*"
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -496,6 +498,10 @@ async def generate_document(request: DocumentRequest):
         if not ollama_available:
             raise OllamaUnavailableError("Ollama service is not responding")
         
+        #validation
+        if not request.prompt:
+            raise HTTPException(status_code=400, detail="Prompt is required")
+        
         # Check if the requested model exists
         model_exists = await check_model_exists(request.model)
         if not model_exists:
@@ -506,7 +512,7 @@ async def generate_document(request: DocumentRequest):
             "model": request.model,
             "prompt": request.prompt,
             "system": request.system_prompt,
-            "options": request.options or {}
+            "options": request.options or {},
             "stream": False  # Explicitly disable streaming
         }
         
@@ -517,7 +523,7 @@ async def generate_document(request: DocumentRequest):
         while retry_count < max_retries:
             try:
                 # Send request to Ollama
-                async with httpx.AsyncClient(timeout=120.0) as client:
+                async with httpx.AsyncClient(timeout=600.0) as client:
                     response = await client.post(
                         f"{OLLAMA_API_BASE_URL}/generate", 
                         json=ollama_request
@@ -542,6 +548,13 @@ async def generate_document(request: DocumentRequest):
                     
                     result = response.json()
                     logger.info(f"Raw Ollama response: {json.dumps(result)}")
+
+                    #validation
+                    if not result.get("response"):
+                        raise HTTPException(
+                            status_code=500,
+                            detail="No response content received from model"
+                        )
 
                     # Format output based on requested format
                     if request.format == "markdown":
@@ -568,17 +581,20 @@ async def generate_document(request: DocumentRequest):
                 raise e
     
     except OllamaUnavailableError as e:
-        logger.error(f"Ollama service unavailable: {str(e)}")
+        logger.error(f"Ollama service unavailable: {str(e)}", exc_info=True)
         raise
     except ModelNotFoundError as e:
-        logger.error(f"Model not found: {str(e)}")
+        logger.error(f"Model not found: {str(e)}", exc_info=True)
         raise
     except httpx.RequestError as e:
-        logger.error(f"Request error: {str(e)}")
+        logger.error(f"Request error: {str(e)}", exc_info=True)
         raise OllamaUnavailableError(f"Connection error: {str(e)}")
     except Exception as e:
-        logger.error(f"Error generating document: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error generating document: {str(e)}")
+        logger.error(f"Error generating document: {str(e)}", exc_info=True)
+        raise HTTPException(
+                status_code=500,
+                detail=f"error generatoring document: {str(e)}"
+        )
 
 @app.post("/generate/stream")
 async def generate_document_stream(request: Request):
@@ -612,13 +628,13 @@ async def generate_document_stream(request: Request):
         }
 
         async def event_generator():
-            async with httpx.AsyncClient(timeout=300.0) as client:
+            async with httpx.AsyncClient(timeout=600.0) as client:
                 try:
                     async with client.stream(
                         "POST", 
                         f"{OLLAMA_API_BASE_URL}/generate", 
                         json=ollama_request,
-                        timeout=300.0
+                        timeout=600.0
                     ) as response:
                         if response.status_code != 200:
                             error_detail = await response.text()
@@ -650,13 +666,13 @@ async def generate_document_stream(request: Request):
             media_type="text/event-stream"
         )
     except OllamaUnavailableError as e:
-        logger.error(f"Ollama service unavailable: {str(e)}")
+        logger.error(f"Ollama service unavailable: {str(e)}", exc_info=True)
         raise
     except ModelNotFoundError as e:
-        logger.error(f"Model not found: {str(e)}")
+        logger.error(f"Model not found: {str(e)}", exc_info=True)
         raise
     except Exception as e:
-        logger.error(f"Error generating document: {str(e)}")
+        logger.error(f"Error generating document: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Error generating document: {str(e)}")
 
 # Run the app (for development)
